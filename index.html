@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6x6 Block Blast JS</title>
+    <style>
+        :root { --bg-color: #1a1a2e; --grid-color: #16213e; --block-color: #0f3460; --active-color: #e94560; }
+        body { font-family: 'Arial', sans-serif; background: var(--bg-color); color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        #game-container { position: relative; }
+        canvas { background: var(--grid-color); border: 4px solid var(--block-color); border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); cursor: crosshair; }
+        .ui { text-align: center; margin-top: 15px; }
+        .score-board { font-size: 24px; font-weight: bold; color: #00d2ff; margin-bottom: 10px; }
+        .controls { color: #888; font-size: 0.9em; }
+        .next-piece-preview { margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="score-board">SCORE: <span id="score">0</span></div>
+    
+    <div id="game-container">
+        <canvas id="gameCanvas" width="360" height="360"></canvas>
+    </div>
+
+    <div class="ui">
+        <div class="next-piece-preview">
+            NEXT: <span id="piece-name">-</span>
+        </div>
+        <p class="controls">盤面をクリックしてピースを配置してください</p>
+        <button onclick="initGame()" style="padding: 10px 20px; cursor:pointer;">リセット</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const pieceNameElement = document.getElementById('piece-name');
+
+    const ROWS = 6;
+    const COLS = 6;
+    const SIZE = 60; // 1マスのサイズ
+
+    let grid = [];
+    let score = 0;
+    let currentPiece = null;
+
+    // テトリス型ピースの定義
+    const SHAPES = [
+        { name: "I", color: "#00f0f0", matrix: [[1, 1, 1, 1]] },
+        { name: "O", color: "#f0f000", matrix: [[1, 1], [1, 1]] },
+        { name: "T", color: "#a000f0", matrix: [[0, 1, 0], [1, 1, 1]] },
+        { name: "L", color: "#f0a000", matrix: [[1, 0], [1, 0], [1, 1]] },
+        { name: "J", color: "#0000f0", matrix: [[0, 1], [0, 1], [1, 1]] },
+        { name: "S", color: "#00f000", matrix: [[0, 1, 1], [1, 1, 0]] },
+        { name: "Z", color: "#f00000", matrix: [[1, 1, 0], [0, 1, 1]] }
+    ];
+
+    function initGame() {
+        grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        score = 0;
+        updateScore(0);
+        spawnPiece();
+        draw();
+    }
+
+    function spawnPiece() {
+        currentPiece = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+        pieceNameElement.textContent = currentPiece.name;
+        pieceNameElement.style.color = currentPiece.color;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 盤面の描画
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                ctx.strokeStyle = "#16213e";
+                ctx.strokeRect(c * SIZE, r * SIZE, SIZE, SIZE);
+                
+                if (grid[r][c]) {
+                    ctx.fillStyle = grid[r][c];
+                    drawBlock(c * SIZE, r * SIZE);
+                }
+            }
+        }
+    }
+
+    function drawBlock(x, y) {
+        ctx.fillRect(x + 2, y + 2, SIZE - 4, SIZE - 4);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.strokeRect(x + 5, y + 5, SIZE - 10, SIZE - 10);
+    }
+
+    function canPlace(row, col, shape) {
+        for (let r = 0; r < shape.length; r++) {
+            for (let c = 0; c < shape[r].length; c++) {
+                if (shape[r][c]) {
+                    let targetR = row + r;
+                    let targetC = col + c;
+                    if (targetR >= ROWS || targetC >= COLS || grid[targetR][targetC]) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    function placePiece(row, col) {
+        if (canPlace(row, col, currentPiece.matrix)) {
+            for (let r = 0; r < currentPiece.matrix.length; r++) {
+                for (let c = 0; c < currentPiece.matrix[r].length; c++) {
+                    if (currentPiece.matrix[r][c]) {
+                        grid[row + r][col + c] = currentPiece.color;
+                    }
+                }
+            }
+            checkLines();
+            spawnPiece();
+            draw();
+            if (isGameOver()) alert("Game Over! Score: " + score);
+        }
+    }
+
+    function checkLines() {
+        let linesToClear = { rows: [], cols: [] };
+
+        // 横行のチェック
+        for (let r = 0; r < ROWS; r++) {
+            if (grid[r].every(cell => cell !== 0)) linesToClear.rows.push(r);
+        }
+        // 縦列のチェック
+        for (let c = 0; c < COLS; c++) {
+            let colFull = true;
+            for (let r = 0; r < ROWS; r++) {
+                if (grid[r][c] === 0) colFull = false;
+            }
+            if (colFull) linesToClear.cols.push(c);
+        }
+
+        // 消去実行
+        linesToClear.rows.forEach(r => grid[r].fill(0));
+        linesToClear.cols.forEach(c => {
+            for (let r = 0; r < ROWS; r++) grid[r][c] = 0;
+        });
+
+        if (linesToClear.rows.length > 0 || linesToClear.cols.length > 0) {
+            updateScore((linesToClear.rows.length + linesToClear.cols.length) * 100);
+        }
+    }
+
+    function updateScore(pts) {
+        score += pts;
+        scoreElement.textContent = score;
+    }
+
+    function isGameOver() {
+        // 全マスを走査して、現在のピースを置ける場所が1つでもあるか確認
+        for (let r = 0; r <= ROWS - currentPiece.matrix.length; r++) {
+            for (let c = 0; c <= COLS - currentPiece.matrix[0].length; c++) {
+                if (canPlace(r, c, currentPiece.matrix)) return false;
+            }
+        }
+        return true;
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const col = Math.floor(x / SIZE);
+        const row = Math.floor(y / SIZE);
+        placePiece(row, col);
+    });
+
+    initGame();
+</script>
+</body>
+</html>
