@@ -3,164 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>漢字1v1しりとり対戦</title>
+    <title>漢字1v1しりとり</title>
     <style>
-        :root { --primary: #2ecc71; --danger: #e74c3c; --bg: #f5f6fa; }
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        #app { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; }
-        
-        /* コンボ表示 */
-        #combo-container { position: absolute; top: -60px; right: 0; background: var(--primary); color: white; padding: 10px 20px; border-radius: 10px; font-size: 24px; font-weight: bold; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
-        
-        #status { text-align: center; margin-bottom: 15px; font-weight: bold; color: #555; height: 1.2em; }
-        #history { height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; background: #fafafa; }
-        
-        .bubble { padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 14px; line-height: 1.4; }
-        .my-msg { align-self: flex-end; background: var(--primary); color: white; }
-        .op-msg { align-self: flex-start; background: #ddd; color: #333; }
-        .system-msg { align-self: center; font-size: 11px; color: #999; background: none; }
-
-        input[type="text"] { width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #ddd; border-radius: 8px; outline: none; transition: border 0.3s; }
+        :root { --primary: #3498db; --danger: #e74c3c; --bg: #f5f6fa; }
+        body { font-family: sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #app { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); position: relative; }
+        #combo-badge { position: absolute; top: -50px; right: 0; background: #f1c40f; color: #333; padding: 10px 15px; border-radius: 8px; font-size: 20px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #status { text-align: center; margin-bottom: 10px; font-weight: bold; color: #555; font-size: 14px; }
+        #history { height: 250px; overflow-y: auto; border: 1px solid #eee; margin-bottom: 15px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #fafafa; border-radius: 8px; }
+        .msg { padding: 8px 12px; border-radius: 12px; font-size: 14px; max-width: 80%; line-height: 1.4; }
+        .my { align-self: flex-end; background: var(--primary); color: white; }
+        .op { align-self: flex-start; background: #ddd; color: #333; }
+        input[type="text"] { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 8px; outline: none; }
         input:focus { border-color: var(--primary); }
-        
-        .controls { display: flex; gap: 8px; margin-top: 10px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
-        #send-btn { background: var(--primary); color: white; }
-        #retire-btn { background: var(--danger); color: white; }
+        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
+        #send-btn { background: var(--primary); }
+        #retire-btn { background: var(--danger); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
-        
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <div id="combo-container">0 <span style="font-size: 12px;">Combo</span></div>
+    <div id="combo-badge">0 <span style="font-size:12px">Combo</span></div>
     
     <div id="login-screen">
-        <h2 style="text-align: center;">漢字しりとり 1v1</h2>
-        <input type="text" id="nick-input" placeholder="ニックネームを入力..." maxlength="10">
-        <button id="join-btn" onclick="joinGame()" style="width:100%; margin-top:15px; background: #3498db; color:white;">対戦相手を探す</button>
+        <h2 style="text-align:center">漢字しりとり 1v1</h2>
+        <input type="text" id="nick-input" placeholder="ニックネームを入力">
+        <button onclick="joinGame()" style="width:100%; margin-top:10px; background:var(--primary)">対戦を開始する</button>
     </div>
 
     <div id="game-screen" class="hidden">
         <div id="status">接続中...</div>
         <div id="history"></div>
-        <div id="input-area">
-            <input type="text" id="word-input" placeholder="漢字を入力..." autocomplete="off">
-            <div class="controls">
-                <button id="send-btn" onclick="sendWord()">送信</button>
-                <button id="retire-btn" onclick="retire()">リタイア</button>
-            </div>
+        <input type="text" id="word-input" placeholder="漢字を入力..." autocomplete="off">
+        <div class="btn-group">
+            <button id="send-btn" onclick="sendWord()">送信</button>
+            <button id="retire-btn" onclick="retire()">リタイア</button>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    const SUPABASE_URL = 'https://lcarwrvmqwkozvmjewbx.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjYXJ3cnZtcXdrb3p2bWpld2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5OTA4NzMsImV4cCI6MjA4NTU2Njg3M30.zkfCIuioT_jek2VegbQVpm8k_3I4X-fIBema3pAMZCQ';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, push, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    let myId = Math.random().toString(36).substring(7);
+    const firebaseConfig = {
+        apiKey: "AIzaSyDjJCu1Q5wSVx4vvegkn3vsRN8-RVCUTVw",
+        authDomain: "survey-7789f.firebaseapp.com",
+        databaseURL: "https://survey-7789f-default-rtdb.firebaseio.com",
+        projectId: "survey-7789f",
+        storageBucket: "survey-7789f.firebasestorage.app",
+        messagingSenderId: "1033373216024",
+        appId: "1:1033373216024:web:cc079ef20209aee234026d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const gameRef = ref(db, 'shiritori_game');
+
     let myNick = "";
-    let opponent = null;
-    let channel = null;
-    let turnId = null;
-    let lastWord = "";
-    let combo = 0;
+    let gameState = {};
 
-    async function joinGame() {
+    window.joinGame = () => {
         myNick = document.getElementById('nick-input').value.trim();
-        if (!myNick) return alert("名前を入力してください");
+        if (!myNick) return alert("名前を入れてね");
 
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('game-screen').classList.remove('hidden');
 
-        channel = supabase.channel('room-1', {
-            config: { presence: { key: myId } }
+        // ゲーム状態の監視
+        onValue(gameRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) {
+                // 最初のプレイヤーが初期化
+                set(gameRef, {
+                    turn: myNick,
+                    combo: 0,
+                    lastWord: "",
+                    p1: myNick,
+                    p2: ""
+                });
+            } else {
+                // 2人目の入室処理
+                if (data.p1 !== myNick && !data.p2) {
+                    set(ref(db, 'shiritori_game/p2'), myNick);
+                }
+                gameState = data;
+                updateUI();
+            }
         });
+    };
 
-        channel
-            .on('presence', { event: 'sync' }, () => {
-                const state = channel.presenceState();
-                const players = Object.keys(state);
-                if (players.length >= 2) {
-                    const sorted = players.sort(); // ID順で先攻を固定
-                    opponent = state[players.find(id => id !== myId)][0];
-                    if (!turnId) startGame(sorted[0], state[sorted[0]][0].nick);
-                } else {
-                    updateStatus("相手の入室を待っています...");
-                }
-            })
-            .on('broadcast', { event: 'move' }, ({ payload }) => handleMove(payload))
-            .on('broadcast', { event: 'gameover' }, ({ payload }) => endGame(payload.msg))
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.track({ nick: myNick, joinedAt: Date.now() });
-                }
+    function updateUI() {
+        const isMyTurn = (gameState.turn === myNick);
+        document.getElementById('combo-badge').innerHTML = `${gameState.combo} <span style="font-size:12px">Combo</span>`;
+        document.getElementById('status').innerText = isMyTurn ? "あなたの番です" : "相手が入力中...";
+        document.getElementById('word-input').disabled = !isMyTurn;
+        document.getElementById('send-btn').disabled = !isMyTurn;
+
+        const history = document.getElementById('history');
+        history.innerHTML = "";
+        if (gameState.logs) {
+            Object.values(gameState.logs).forEach(log => {
+                const div = document.createElement('div');
+                div.className = `msg ${log.by === myNick ? 'my' : 'op'}`;
+                div.innerText = `${log.by}: ${log.word}`;
+                history.appendChild(div);
             });
+            history.scrollTop = history.scrollHeight;
+        }
+        if (isMyTurn) document.getElementById('word-input').focus();
     }
 
-    function startGame(firstId, firstName) {
-        turnId = firstId;
-        addLog(`対戦開始！先攻は ${firstName} です`, "system-msg");
-        updateUI();
-    }
-
-    function handleMove(data) {
-        lastWord = data.word;
-        combo = data.combo;
-        turnId = data.nextId;
-        addLog(`${data.by}: ${data.word}`, data.by === myNick ? "my-msg" : "op-msg");
-        updateUI();
-    }
-
-    function sendWord() {
+    window.sendWord = () => {
         const input = document.getElementById('word-input');
         const word = input.value.trim();
         if (!word) return;
 
-        // ルールチェック
-        if (lastWord) {
-            const lastChar = lastWord.slice(-1);
+        // 判定ロジック
+        if (gameState.lastWord) {
+            const lastChar = gameState.lastWord.slice(-1);
             if (word[0] !== lastChar) return alert(`「${lastChar}」から始まる漢字にしてください！`);
-            if (word === lastWord) return alert("同じ言葉は使えません！");
+            if (word === gameState.lastWord) return alert("同じ言葉は使えません！");
         }
         if (word.endsWith("ん")) {
-            channel.send({ type: 'broadcast', event: 'gameover', payload: { msg: `「ん」がつきました！${myNick}の負けです。` }});
-            return;
+            alert("「ん」がつきました！負けです。");
+            return retire();
         }
 
-        channel.send({
-            type: 'broadcast',
-            event: 'move',
-            payload: { word, by: myNick, combo: combo + 1, nextId: Object.keys(channel.presenceState()).find(id => id !== myId) }
-        });
+        const nextTurn = (myNick === gameState.p1) ? gameState.p2 || "相手" : gameState.p1;
+        
+        push(ref(db, 'shiritori_game/logs'), { by: myNick, word: word });
+        set(ref(db, 'shiritori_game/lastWord'), word);
+        set(ref(db, 'shiritori_game/combo'), gameState.combo + 1);
+        set(ref(db, 'shiritori_game/turn'), nextTurn);
         input.value = "";
-    }
+    };
 
-    function updateUI() {
-        const isMyTurn = (turnId === myId);
-        document.getElementById('word-input').disabled = !isMyTurn;
-        document.getElementById('send-btn').disabled = !isMyTurn;
-        document.getElementById('combo-container').innerText = combo;
-        updateStatus(isMyTurn ? "あなたの番です" : "相手が入力中...");
-        if (isMyTurn) document.getElementById('word-input').focus();
-    }
-
-    function addLog(text, className) {
-        const history = document.getElementById('history');
-        const div = document.createElement('div');
-        div.className = `bubble ${className}`;
-        div.innerText = text;
-        history.appendChild(div);
-        history.scrollTop = history.scrollHeight;
-    }
-
-    function updateStatus(msg) { document.getElementById('status').innerText = msg; }
-    function retire() { channel.send({ type: 'broadcast', event: 'gameover', payload: { msg: `${myNick}が降参しました。` }}); }
-    function endGame(msg) { alert(msg); location.reload(); }
+    window.retire = () => {
+        alert("ゲーム終了！リセットします。");
+        set(gameRef, null);
+        location.reload();
+    };
 </script>
 </body>
 </html>
